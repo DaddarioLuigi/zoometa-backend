@@ -9,3 +9,11 @@ flask_socketio
 eventlet
 marshmallow
 flask_limiter
+openai
+python-dotenv
+pinecone-client
+llama-index
+langchain
+transformers
+redis
+
