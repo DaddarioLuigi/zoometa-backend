@@ -18,8 +18,8 @@ def create_session():
     chat_service = ChatService(
         pinecone_api_key=os.getenv("PINECONE_API_KEY"),
         openai_api_key=os.getenv("OPENAI_API_KEY"),
-        kb_dir="/Users/luigidaddario/Downloads/auxilium_files_test",
-        product_kb_dir="/Users/luigidaddario/Downloads/auxilium_products"
+        kb_dir="/Users/luigidaddario/Downloads/kb_zoometa_arianna/kb",
+        product_kb_dir="/Users/luigidaddario/Downloads/kb_zoometa_arianna/kb"
     )
     chat_services[session_id] = chat_service
     redis_client.set(session_id, json.dumps({}))  # json.dumps serializza i dati in una stringa JSON

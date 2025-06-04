@@ -12,7 +12,7 @@ from models import db
 from routes import auth_bp, chatbot_bp, dashboard_bp
 from sockets.notifications import socketio as socketio_instance
 
-import os
+import os 
 
 def create_app():
     app = Flask(__name__)
