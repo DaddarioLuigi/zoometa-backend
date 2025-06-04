@@ -1,4 +1,4 @@
-# socket/notifications.py
+# sockets/notifications.py
 from flask_socketio import SocketIO, emit
 from models import Conversation
 
