@@ -1,16 +1,10 @@
 # routes/dashboard.py
-from flask import Blueprint, jsonify
-from flask_jwt_extended import jwt_required
-from utils.helpers import role_required
-# routes/dashboard.py
 from flask import Blueprint, jsonify, request, send_file
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required
 from models import db, Conversation
 from utils.helpers import role_required
 import io
 import csv
-from flask_socketio import emit
-from sockets.notifications import notify_new_conversation
 
 dashboard_bp = Blueprint('dashboard', __name__)
 
@@ -20,8 +14,6 @@ dashboard_bp = Blueprint('dashboard', __name__)
 def admin_only_route():
     return jsonify({"message": "Solo admin possono vedere questo"}), 200
 
-
-dashboard_bp = Blueprint('dashboard', __name__)
 
 @dashboard_bp.route("/conversations", methods=["GET"])
 @jwt_required()
