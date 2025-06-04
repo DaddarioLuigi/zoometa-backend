@@ -1,0 +1,11 @@
+Flask
+flask_sqlalchemy
+flask_migrate
+flask_jwt_extended
+flask_cors
+pymysql
+bcrypt
+flask_socketio
+eventlet
+marshmallow
+flask_limiter
