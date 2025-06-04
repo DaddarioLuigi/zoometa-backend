@@ -13,6 +13,7 @@ openai
 python-dotenv
 pinecone-client
 llama-index
+llama-index-vector-stores-pinecone
 langchain
 transformers
 redis
