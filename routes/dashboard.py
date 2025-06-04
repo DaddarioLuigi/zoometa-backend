@@ -18,7 +18,8 @@ def admin_only_route():
 @dashboard_bp.route("/conversations", methods=["GET"])
 @jwt_required()
 def get_conversations():
-    conversations = Conversation.query.order_by(Conversation.timestamp.desc()).all() #how does it works?
+    # retrieve conversations ordered by newest first
+    conversations = Conversation.query.order_by(Conversation.timestamp.desc()).all()
     conversations_data = [
         {
             "id": conv.id,
