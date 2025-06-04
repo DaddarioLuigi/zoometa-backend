@@ -23,7 +23,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from llama_index.core.llms import ChatMessage, MessageRole
 from llama_index.core.chat_engine.types import BaseChatEngine
 from llama_index.core.agent.react.base import ReActAgent
-from llama_index.core.tools.tool_spec.base import QueryEngineTool, ToolMetadata
+from llama_index.core.tools import QueryEngineTool, ToolMetadata
 from llama_index.agent.openai import OpenAIAgent
 
 import os
