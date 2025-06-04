@@ -53,6 +53,24 @@ def ingest_kb():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+
+@chatbot_bp.route("/delete_indexes", methods=["POST"])
+def delete_indexes():
+    """Delete existing Pinecone indexes."""
+    try:
+        chat_service = ChatService(
+            pinecone_api_key=os.getenv("PINECONE_API_KEY"),
+            openai_api_key=os.getenv("OPENAI_API_KEY"),
+            kb_dir="/Users/luigidaddario/Downloads/auxilium_files_test",
+            product_kb_dir="/Users/luigidaddario/Downloads/auxilium_products"
+        )
+
+        chat_service.delete_indices("main-index", "product-index")
+
+        return jsonify({"message": "Indexes deleted successfully!"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 @chatbot_bp.route("/chat", methods=["POST"])
 def chat():
     data = request.json
