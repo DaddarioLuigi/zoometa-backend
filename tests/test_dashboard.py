@@ -34,7 +34,9 @@ for name in [
 
 
 # Ensure the application uses an in-memory database during import
-os.environ.setdefault('DATABASE_URI', 'sqlite:///:memory:')
+# Force the app to use an in-memory SQLite DB for testing even if a
+# DATABASE_URI is already defined in the environment.
+os.environ['DATABASE_URI'] = 'sqlite:///:memory:'
 
 pinecone = types.ModuleType('pinecone')
 pinecone.Pinecone = object

@@ -53,11 +53,30 @@ def ingest_kb():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+
+@chatbot_bp.route("/delete_indexes", methods=["POST"])
+def delete_indexes():
+    """Delete existing Pinecone indexes."""
+    try:
+        chat_service = ChatService(
+            pinecone_api_key=os.getenv("PINECONE_API_KEY"),
+            openai_api_key=os.getenv("OPENAI_API_KEY"),
+            kb_dir="/Users/luigidaddario/Downloads/auxilium_files_test",
+            product_kb_dir="/Users/luigidaddario/Downloads/auxilium_products"
+        )
+
+        chat_service.delete_indices("main-index", "product-index")
+
+        return jsonify({"message": "Indexes deleted successfully!"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 @chatbot_bp.route("/chat", methods=["POST"])
 def chat():
     data = request.json
     session_id = data.get("session_id")
     user_input = data.get("input")
+    response_format = data.get("response_format", "html")
 
     if not session_id:
         return jsonify({"error": "session_id is required"}), 400
@@ -71,7 +90,7 @@ def chat():
     if not chat_service:
         return jsonify({"error": "Chat service not found for session_id"}), 400
 
-    response = chat_service.handle_user_query(user_input)
+    response = chat_service.handle_user_query(user_input, response_format)
 
     # Salva la conversazione nel database
     conversation = Conversation(session_id=session_id, user_input=user_input, bot_response=response)
