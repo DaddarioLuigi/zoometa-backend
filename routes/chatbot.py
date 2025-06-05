@@ -132,6 +132,30 @@ def chat_audio():
 
     return jsonify({"response": response_text, "audio": audio_base64}), 200
 
+
+@chatbot_bp.route("/speak", methods=["POST"])
+def speak():
+    """Convert given text to speech and return it as base64."""
+    data = request.json
+    if not data:
+        return jsonify({"error": "Missing JSON body"}), 400
+    session_id = data.get("session_id")
+    text = data.get("text")
+    if not session_id:
+        return jsonify({"error": "session_id is required"}), 400
+    if not text:
+        return jsonify({"error": "text is required"}), 400
+
+    if not session_exist(session_id):
+        return jsonify({"error": "Invalid session_id"}), 400
+
+    chat_service = chat_services.get(session_id)
+    if not chat_service:
+        return jsonify({"error": "Chat service not found for session_id"}), 400
+
+    audio_base64 = chat_service.text_to_speech(text)
+    return jsonify({"audio": audio_base64}), 200
+
 @chatbot_bp.route("/rate_chat", methods=["POST"])
 def rate_chat():
     try:
