@@ -17,4 +17,5 @@ llama-index-vector-stores-pinecone
 langchain
 transformers
 redis
+gtts
 

@@ -28,13 +28,16 @@ for name in [
     'llama_index.llms.openai',
     'llama_index.vector_stores',
     'llama_index.vector_stores.pinecone',
+    'gtts',
 ]:
     module = types.ModuleType(name)
     sys.modules[name] = module
 
 
 # Ensure the application uses an in-memory database during import
-os.environ.setdefault('DATABASE_URI', 'sqlite:///:memory:')
+# Force the app to use an in-memory SQLite DB for testing even if a
+# DATABASE_URI is already defined in the environment.
+os.environ['DATABASE_URI'] = 'sqlite:///:memory:'
 
 pinecone = types.ModuleType('pinecone')
 pinecone.Pinecone = object
