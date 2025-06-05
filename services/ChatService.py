@@ -72,7 +72,7 @@ class ChatService:
 
     def init_agent(self):
         informative_tool = QueryEngineTool(
-            query_engine=self.vector_index.as_query_engine(),
+            query_engine=self.vector_index.as_query_engine(similarity_top_k=3),
             metadata=ToolMetadata(
                 name="informative_tool",
                 description=(
@@ -84,7 +84,7 @@ class ChatService:
         )
 
         recommendation_tool = CustomRecommendationTool(
-            query_engine=self.vector_index_product.as_query_engine(),
+            query_engine=self.vector_index_product.as_query_engine(similarity_top_k=3),
             metadata=ToolMetadata(
                 name="recommendation_tool",
                 description=(
@@ -182,12 +182,12 @@ Se il comportamento si ripete più volte nella stessa chat, chiudi educatamente 
             initial_context=base_prompt
         )
 
-    def handle_user_query(self, user_query, response_format="html", json_mode=False):
+    def handle_user_query(self, user_query, response_format="html"):
         """Handle a single user query and format the output."""
         response = self.chatbot_agent.process_user_input(user_query)
         text = getattr(response, "response", response)
 
-        if response_format == "json" or json_mode:
+        if response_format == "json":
             return self.format_response_as_json(text)
         if response_format == "text":
             return text
@@ -202,9 +202,10 @@ Se il comportamento si ripete più volte nella stessa chat, chiudi educatamente 
         return text
 
     def format_response_as_json(self, text):
+        """Try to extract JSON from the LLM response."""
         try:
             start = text.index('{')
             end = text.rindex('}') + 1
-            return json.loads(text[start:end])
+            return text[start:end]
         except ValueError:
-            return {"products": []}
+            return text

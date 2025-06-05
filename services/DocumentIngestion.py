@@ -28,6 +28,8 @@ from llama_index.agent.openai import OpenAIAgent
 
 import pinecone
 import os
+import csv
+from pathlib import Path
 from getpass import getpass
 from transformers import GPT2TokenizerFast
 
@@ -46,8 +48,8 @@ class DocumentIngestion:
         return [Document(text=t) for t in split_docs]
 
     def ingest_documents(self):
-        # Load and preprocess documents
-        documents = SimpleDirectoryReader(self.kb_dir).load_data()
+        """Load files from the directory and push them to the vector store."""
+        documents = self._load_documents()
         preprocessed_docs = self.preprocess_documents(documents)
         
         # Ingest into vector store
@@ -59,8 +61,25 @@ class DocumentIngestion:
 
     def process_in_batches(self, pipeline, documents, batch_size=5):
         for i in range(0, len(documents), batch_size):
-            batch = documents[i:i+batch_size]
+            batch = documents[i:i + batch_size]
             pipeline.run(documents=batch)
+
+    def _load_documents(self):
+        """Load documents and parse CSV files into structured text."""
+        docs = []
+        path = Path(self.kb_dir)
+        for entry in path.iterdir():
+            if entry.suffix.lower() == ".csv":
+                with open(entry, newline="", encoding="utf-8") as f:
+                    reader = csv.DictReader(f)
+                    for row in reader:
+                        text = "\n".join(
+                            f"{k}: {v}" for k, v in row.items() if v
+                        )
+                        docs.append(Document(text=text))
+            else:
+                docs.extend(SimpleDirectoryReader(str(entry)).load_data())
+        return docs
 
     def count_tokens(self, text):
         tokenizer = GPT2TokenizerFast.from_pretrained("gpt2")
