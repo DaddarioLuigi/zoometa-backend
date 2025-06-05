@@ -53,11 +53,30 @@ def ingest_kb():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+
+@chatbot_bp.route("/delete_indexes", methods=["POST"])
+def delete_indexes():
+    """Delete existing Pinecone indexes."""
+    try:
+        chat_service = ChatService(
+            pinecone_api_key=os.getenv("PINECONE_API_KEY"),
+            openai_api_key=os.getenv("OPENAI_API_KEY"),
+            kb_dir="/Users/luigidaddario/Downloads/auxilium_files_test",
+            product_kb_dir="/Users/luigidaddario/Downloads/auxilium_products"
+        )
+
+        chat_service.delete_indices("main-index", "product-index")
+
+        return jsonify({"message": "Indexes deleted successfully!"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 @chatbot_bp.route("/chat", methods=["POST"])
 def chat():
     data = request.json
     session_id = data.get("session_id")
     user_input = data.get("input")
+    response_format = data.get("response_format", "html")
 
     if not session_id:
         return jsonify({"error": "session_id is required"}), 400
@@ -71,7 +90,7 @@ def chat():
     if not chat_service:
         return jsonify({"error": "Chat service not found for session_id"}), 400
 
-    response = chat_service.handle_user_query(user_input)
+    response = chat_service.handle_user_query(user_input, response_format)
 
     # Salva la conversazione nel database
     conversation = Conversation(session_id=session_id, user_input=user_input, bot_response=response)
@@ -83,6 +102,59 @@ def chat():
     notify_new_conversation(conversation)
 
     return jsonify({"response": response}), 200
+
+@chatbot_bp.route("/chat_audio", methods=["POST"])
+def chat_audio():
+    """Handle an audio message and return text and audio response."""
+    if "audio" not in request.files:
+        return jsonify({"error": "audio file is required"}), 400
+    session_id = request.form.get("session_id")
+    response_format = request.form.get("response_format", "html")
+    if not session_id:
+        return jsonify({"error": "session_id is required"}), 400
+
+    if not session_exist(session_id):
+        return jsonify({"error": "Invalid session_id"}), 400
+
+    chat_service = chat_services.get(session_id)
+    if not chat_service:
+        return jsonify({"error": "Chat service not found for session_id"}), 400
+
+    audio_file = request.files["audio"]
+    response_text, audio_base64 = chat_service.handle_audio_query(audio_file, response_format)
+
+    conversation = Conversation(session_id=session_id, user_input="[AUDIO]", bot_response=response_text)
+    db.session.add(conversation)
+    db.session.commit()
+
+    from sockets.notifications import notify_new_conversation
+    notify_new_conversation(conversation)
+
+    return jsonify({"response": response_text, "audio": audio_base64}), 200
+
+
+@chatbot_bp.route("/speak", methods=["POST"])
+def speak():
+    """Convert given text to speech and return it as base64."""
+    data = request.json
+    if not data:
+        return jsonify({"error": "Missing JSON body"}), 400
+    session_id = data.get("session_id")
+    text = data.get("text")
+    if not session_id:
+        return jsonify({"error": "session_id is required"}), 400
+    if not text:
+        return jsonify({"error": "text is required"}), 400
+
+    if not session_exist(session_id):
+        return jsonify({"error": "Invalid session_id"}), 400
+
+    chat_service = chat_services.get(session_id)
+    if not chat_service:
+        return jsonify({"error": "Chat service not found for session_id"}), 400
+
+    audio_base64 = chat_service.text_to_speech(text)
+    return jsonify({"audio": audio_base64}), 200
 
 @chatbot_bp.route("/rate_chat", methods=["POST"])
 def rate_chat():

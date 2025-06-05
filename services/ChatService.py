@@ -2,6 +2,7 @@ from .PineconeManager import PineconeManager
 from llama_index.core.settings import Settings
 from llama_index.core.indices.vector_store import VectorStoreIndex
 from llama_index.core.tools import QueryEngineTool, ToolMetadata
+from .CustomRecommendationTool import CustomRecommendationTool
 from llama_index.embeddings.openai import OpenAIEmbedding
 from llama_index.llms.openai import OpenAI
 
@@ -9,6 +10,11 @@ from .DocumentIngestion import DocumentIngestion
 from .ChatbotAgent import ChatbotAgent
 
 import re
+import openai
+from gtts import gTTS
+import base64
+import uuid
+import os
 
 class ChatService:
     def __init__(self, pinecone_api_key, openai_api_key, kb_dir, product_kb_dir):
@@ -36,12 +42,14 @@ class ChatService:
         self.init_agent()
 
     def init_pinecone(self, main_index_name, product_index_name):
-        # Check if the main index exists
+        """Ensure that Pinecone indices exist and are optimised."""
+        dimension = 1536  # dimension for OpenAI embeddings
+
         if not self.pinecone_manager.index_exists(main_index_name):
-            self.pinecone_manager.create_index(main_index_name)
-        
+            self.pinecone_manager.create_index(main_index_name, dimension=dimension)
+
         if not self.pinecone_manager.index_exists(product_index_name):
-            self.pinecone_manager.create_index(product_index_name)
+            self.pinecone_manager.create_index(product_index_name, dimension=dimension)
 
         # Get the vector stores
         self.vector_store = self.pinecone_manager.get_vector_store(main_index_name)
@@ -61,9 +69,14 @@ class ChatService:
         self.document_ingestion.ingest_documents()
         self.product_ingestion.ingest_documents()
 
+    def delete_indices(self, main_index_name, product_index_name):
+        """Remove Pinecone indices if they exist."""
+        self.pinecone_manager.delete_index(main_index_name)
+        self.pinecone_manager.delete_index(product_index_name)
+
     def init_agent(self):
         informative_tool = QueryEngineTool(
-            query_engine=self.vector_index.as_query_engine(),
+            query_engine=self.vector_index.as_query_engine(similarity_top_k=3),
             metadata=ToolMetadata(
                 name="informative_tool",
                 description=(
@@ -74,8 +87,8 @@ class ChatService:
             ),
         )
 
-        recommendation_tool = QueryEngineTool(
-            query_engine=self.vector_index_product.as_query_engine(),
+        recommendation_tool = CustomRecommendationTool(
+            query_engine=self.vector_index_product.as_query_engine(similarity_top_k=3),
             metadata=ToolMetadata(
                 name="recommendation_tool",
                 description=(
@@ -141,6 +154,11 @@ Se non ci sono prodotti idonei, generare un link HTML di ricerca con parole chia
 
 <a href="https://www.zoometa.it/ricerca?controller=search&s=PAROLE+CHIAVE">Cerca altri prodotti</a>
 
+Se l'utente richiede i consigli in formato JSON o la modalità JSON è attiva,
+restituisci esclusivamente un oggetto nel formato:
+{"products": [{"name": "Nome prodotto", "link": "URL", "brand": "Produttore", "price": "€ 0,00"}, ...]}
+senza testo aggiuntivo.
+
 4. Conclusione
 «Spero di esserti stata utile. Per qualsiasi altra domanda sono qui. Se desideri un consulto più approfondito con i nostri specialisti ZooMeta, scrivici a info@zoometa.it. Grazie per aver scelto ZooMeta.»
 
@@ -168,9 +186,16 @@ Se il comportamento si ripete più volte nella stessa chat, chiudi educatamente 
             initial_context=base_prompt
         )
 
-    def handle_user_query(self, user_query):
+    def handle_user_query(self, user_query, response_format="html"):
+        """Handle a single user query and format the output."""
         response = self.chatbot_agent.process_user_input(user_query)
-        return self.format_response_as_html(response.response)
+        text = getattr(response, "response", response)
+
+        if response_format == "json":
+            return self.format_response_as_json(text)
+        if response_format == "text":
+            return text
+        return self.format_response_as_html(text)
 
     def format_response_as_html(self, text):
         text = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', text)
@@ -179,3 +204,44 @@ Se il comportamento si ripete più volte nella stessa chat, chiudi educatamente 
         text = re.sub(r'^\s*-\s(.+)$', r'<li>\1</li>', text, flags=re.MULTILINE)
         text = re.sub(r'(<li>.*</li>)', r'<ul>\1</ul>', text, flags=re.DOTALL)
         return text
+
+    def format_response_as_json(self, text):
+        """Try to extract JSON from the LLM response."""
+        try:
+            start = text.index('{')
+            end = text.rindex('}') + 1
+            return text[start:end]
+        except ValueError:
+            return text
+
+    def transcribe_audio(self, audio_file):
+        """Transcribe an uploaded audio file using OpenAI Whisper."""
+        transcription = openai.Audio.transcribe("whisper-1", audio_file)
+        if isinstance(transcription, dict):
+            return transcription.get("text", "")
+        return getattr(transcription, "text", "")
+
+    def text_to_speech(self, text):
+        """Convert text to speech and return base64 encoded audio."""
+        tts = gTTS(text=text, lang="it")
+        tmp_path = f"/tmp/{uuid.uuid4().hex}.mp3"
+        tts.save(tmp_path)
+        with open(tmp_path, "rb") as f:
+            data = base64.b64encode(f.read()).decode("utf-8")
+        os.remove(tmp_path)
+        return data
+
+    def handle_audio_query(self, audio_file, response_format="html"):
+        """Process an audio query and return text and audio."""
+        user_text = self.transcribe_audio(audio_file)
+        raw_response = self.handle_user_query(user_text, "text")
+
+        if response_format == "json":
+            formatted = self.format_response_as_json(raw_response)
+        elif response_format == "text":
+            formatted = raw_response
+        else:
+            formatted = self.format_response_as_html(raw_response)
+
+        audio_base64 = self.text_to_speech(raw_response)
+        return formatted, audio_base64
