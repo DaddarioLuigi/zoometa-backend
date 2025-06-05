@@ -8,6 +8,7 @@ from llama_index.llms.openai import OpenAI
 
 from .DocumentIngestion import DocumentIngestion
 from .ChatbotAgent import ChatbotAgent
+import json
 
 import re
 
@@ -176,12 +177,12 @@ Se il comportamento si ripete più volte nella stessa chat, chiudi educatamente 
             initial_context=base_prompt
         )
 
-    def handle_user_query(self, user_query, response_format="html"):
+    def handle_user_query(self, user_query, response_format="html", json_mode=False):
         """Handle a single user query and format the output."""
         response = self.chatbot_agent.process_user_input(user_query)
         text = getattr(response, "response", response)
 
-        if response_format == "json":
+        if response_format == "json" or json_mode:
             return self.format_response_as_json(text)
         if response_format == "text":
             return text
@@ -196,10 +197,9 @@ Se il comportamento si ripete più volte nella stessa chat, chiudi educatamente 
         return text
 
     def format_response_as_json(self, text):
-        """Try to extract JSON from the LLM response."""
         try:
             start = text.index('{')
             end = text.rindex('}') + 1
-            return text[start:end]
+            return json.loads(text[start:end])
         except ValueError:
-            return text
+            return {"products": []}

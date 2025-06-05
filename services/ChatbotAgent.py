@@ -37,7 +37,7 @@ class ChatbotAgent:
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
     def __init__(self, informative_tool, recommendation_tool, llm, initial_context):
-        self.agent = OpenAIAgent.from_tools([informative_tool, recommendation_tool], llm=llm, verbose=True, temperature=0.4)
+        self.agent = OpenAIAgent.from_tools([informative_tool, recommendation_tool], llm=llm, verbose=True, temperature=0.5)
         self.initial_context = initial_context
         self.chat_history = []
 
