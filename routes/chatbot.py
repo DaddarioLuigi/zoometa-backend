@@ -40,8 +40,8 @@ def ingest_kb():
         chat_service = ChatService(
             pinecone_api_key=os.getenv("PINECONE_API_KEY"),
             openai_api_key=os.getenv("OPENAI_API_KEY"),
-            kb_dir="/Users/luigidaddario/Downloads/auxilium_files_test",
-            product_kb_dir="/Users/luigidaddario/Downloads/auxilium_products"
+            kb_dir="/Users/luigidaddario/Downloads/kb_zoometa_arianna/kb",
+            product_kb_dir="/Users/luigidaddario/Downloads/kb_zoometa_arianna/prodotti"
         )
 
         if not chat_service.pinecone_manager.index_exists("main-index") or not chat_service.pinecone_manager.index_exists("product-index"):
@@ -61,8 +61,8 @@ def delete_indexes():
         chat_service = ChatService(
             pinecone_api_key=os.getenv("PINECONE_API_KEY"),
             openai_api_key=os.getenv("OPENAI_API_KEY"),
-            kb_dir="/Users/luigidaddario/Downloads/auxilium_files_test",
-            product_kb_dir="/Users/luigidaddario/Downloads/auxilium_products"
+            kb_dir="/Users/luigidaddario/Downloads/kb_zoometa_arianna/kb",
+            product_kb_dir="/Users/luigidaddario/Downloads/kb_zoometa_arianna/prodotti"
         )
 
         chat_service.delete_indices("main-index", "product-index")
