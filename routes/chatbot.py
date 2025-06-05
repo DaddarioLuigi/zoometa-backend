@@ -1,11 +1,14 @@
 # routes/chatbot.py
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, send_file
 from services.ChatService import ChatService
 from models import db, Conversation, Reviews
 import uuid
 import redis
 import json
 import os
+import tempfile
+from gtts import gTTS
+import openai
 
 chatbot_bp = Blueprint('chatbot', __name__)
 
@@ -164,3 +167,57 @@ def end_session():
             return jsonify({"error": "Invalid session_id"}), 400
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@chatbot_bp.route("/chat_audio", methods=["POST"])
+def chat_audio():
+    data = request.form
+    session_id = data.get("session_id")
+    if not session_id:
+        return jsonify({"error": "session_id is required"}), 400
+    if 'audio' not in request.files:
+        return jsonify({"error": "audio file is required"}), 400
+    if not session_exist(session_id):
+        return jsonify({"error": "Invalid session_id"}), 400
+
+    audio_file = request.files['audio']
+    with tempfile.NamedTemporaryFile(delete=False, suffix='.mp3') as tmp:
+        audio_file.save(tmp.name)
+        tmp_path = tmp.name
+
+    with open(tmp_path, 'rb') as f:
+        transcript = openai.Audio.transcribe("whisper-1", f)["text"]
+
+    os.remove(tmp_path)
+
+    chat_service = chat_services.get(session_id)
+    if not chat_service:
+        return jsonify({"error": "Chat service not found for session_id"}), 400
+
+    response_text = chat_service.handle_user_query(transcript, "text")
+
+    conversation = Conversation(session_id=session_id, user_input=transcript, bot_response=response_text)
+    db.session.add(conversation)
+    db.session.commit()
+
+    from sockets.notifications import notify_new_conversation
+    notify_new_conversation(conversation)
+
+    return jsonify({"response": response_text, "transcript": transcript}), 200
+
+
+@chatbot_bp.route("/text_to_speech", methods=["POST"])
+def text_to_speech():
+    data = request.json
+    text = data.get("text") if data else None
+    if not text:
+        return jsonify({"error": "text is required"}), 400
+
+    tts = gTTS(text)
+    with tempfile.NamedTemporaryFile(delete=False, suffix='.mp3') as tmp:
+        tts.save(tmp.name)
+        tmp_path = tmp.name
+
+    return_data = send_file(tmp_path, mimetype='audio/mpeg', as_attachment=True, download_name='response.mp3')
+    os.remove(tmp_path)
+    return return_data
