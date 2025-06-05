@@ -103,6 +103,35 @@ def chat():
 
     return jsonify({"response": response}), 200
 
+@chatbot_bp.route("/chat_audio", methods=["POST"])
+def chat_audio():
+    """Handle an audio message and return text and audio response."""
+    if "audio" not in request.files:
+        return jsonify({"error": "audio file is required"}), 400
+    session_id = request.form.get("session_id")
+    response_format = request.form.get("response_format", "html")
+    if not session_id:
+        return jsonify({"error": "session_id is required"}), 400
+
+    if not session_exist(session_id):
+        return jsonify({"error": "Invalid session_id"}), 400
+
+    chat_service = chat_services.get(session_id)
+    if not chat_service:
+        return jsonify({"error": "Chat service not found for session_id"}), 400
+
+    audio_file = request.files["audio"]
+    response_text, audio_base64 = chat_service.handle_audio_query(audio_file, response_format)
+
+    conversation = Conversation(session_id=session_id, user_input="[AUDIO]", bot_response=response_text)
+    db.session.add(conversation)
+    db.session.commit()
+
+    from sockets.notifications import notify_new_conversation
+    notify_new_conversation(conversation)
+
+    return jsonify({"response": response_text, "audio": audio_base64}), 200
+
 @chatbot_bp.route("/rate_chat", methods=["POST"])
 def rate_chat():
     try:

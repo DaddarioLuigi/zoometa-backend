@@ -8,6 +8,11 @@ from llama_index.llms.openai import OpenAI
 
 from .DocumentIngestion import DocumentIngestion
 from .ChatbotAgent import ChatbotAgent
+import openai
+from gtts import gTTS
+import base64
+import uuid
+import os
 import json
 
 import re
@@ -183,6 +188,38 @@ Se il comportamento si ripete più volte nella stessa chat, chiudi educatamente 
         )
 
     def handle_user_query(self, user_query, response_format="html"):
+
+    def transcribe_audio(self, audio_file):
+        """Transcribe an uploaded audio file using OpenAI Whisper."""
+        transcription = openai.Audio.transcribe("whisper-1", audio_file)
+        if isinstance(transcription, dict):
+            return transcription.get("text", "")
+        return getattr(transcription, "text", "")
+
+    def text_to_speech(self, text):
+        """Convert text to speech and return base64 encoded audio."""
+        tts = gTTS(text=text, lang="it")
+        tmp_path = f"/tmp/{uuid.uuid4().hex}.mp3"
+        tts.save(tmp_path)
+        with open(tmp_path, "rb") as f:
+            data = base64.b64encode(f.read()).decode("utf-8")
+        os.remove(tmp_path)
+        return data
+
+    def handle_audio_query(self, audio_file, response_format="html"):
+        """Process an audio query and return text and audio."""
+        user_text = self.transcribe_audio(audio_file)
+        raw_response = self.handle_user_query(user_text, "text")
+
+        if response_format == "json":
+            formatted = self.format_response_as_json(raw_response)
+        elif response_format == "text":
+            formatted = raw_response
+        else:
+            formatted = self.format_response_as_html(raw_response)
+
+        audio_base64 = self.text_to_speech(raw_response)
+        return formatted, audio_base64
         """Handle a single user query and format the output."""
         response = self.chatbot_agent.process_user_input(user_query)
         text = getattr(response, "response", response)

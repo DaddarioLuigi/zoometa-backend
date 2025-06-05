@@ -28,6 +28,7 @@ for name in [
     'llama_index.llms.openai',
     'llama_index.vector_stores',
     'llama_index.vector_stores.pinecone',
+    'gtts',
 ]:
     module = types.ModuleType(name)
     sys.modules[name] = module
