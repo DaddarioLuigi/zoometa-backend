@@ -65,6 +65,11 @@ class ChatService:
         self.document_ingestion.ingest_documents()
         self.product_ingestion.ingest_documents()
 
+    def delete_indices(self, main_index_name, product_index_name):
+        """Remove Pinecone indices if they exist."""
+        self.pinecone_manager.delete_index(main_index_name)
+        self.pinecone_manager.delete_index(product_index_name)
+
     def init_agent(self):
         informative_tool = QueryEngineTool(
             query_engine=self.vector_index.as_query_engine(),

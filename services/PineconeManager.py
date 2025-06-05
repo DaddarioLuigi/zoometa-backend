@@ -28,3 +28,8 @@ class PineconeManager:
 
     def index_exists(self, index_name):
         return index_name in self.pc.list_indexes().names()
+
+    def delete_index(self, index_name):
+        """Delete an index if it exists."""
+        if self.index_exists(index_name):
+            self.pc.delete_index(index_name)
