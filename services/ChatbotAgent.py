@@ -37,21 +37,24 @@ class ChatbotAgent:
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
     def __init__(self, informative_tool, recommendation_tool, llm, initial_context):
-        self.agent = OpenAIAgent.from_tools([informative_tool, recommendation_tool], llm=llm, verbose=True, temperature=0.4)
-        self.initial_context = initial_context
+        self.agent = OpenAIAgent.from_tools(
+            [informative_tool, recommendation_tool],
+            llm=llm,
+            verbose=True,
+            system_prompt=initial_context,
+            temperature=0.4,
+        )
         self.chat_history = []
 
     def process_user_input(self, user_query):
-        # Aggiorna la cronologia della chat
+        """Process a single query while keeping conversation context."""
         self.chat_history.append(f"User: {user_query}")
 
-        # Genera la risposta
-        conversation_context = f"{self.initial_context}\n" + "\n".join(self.chat_history) + "\nAssistant:"
-        response = self.agent.chat(conversation_context) 
+        # Let the agent manage the chat history internally
+        response = self.agent.chat(user_query)
 
-         # Logga la finestra di contesto
-        logging.info("Finestra di contesto:\n%s", conversation_context)
+        logging.info("Finestra di contesto:\n%s", "\n".join(self.chat_history))
 
-        # Aggiorna la cronologia della chat
-        self.chat_history.append(f"Assistant: {response}")
+        text = getattr(response, "response", response)
+        self.chat_history.append(f"Assistant: {text}")
         return response

@@ -6,12 +6,15 @@ class CustomRecommendationTool(QueryEngineTool):
         super().__init__(query_engine, metadata)
 
     def run(self, *args, **kwargs):
-        # Esegui il tool e ottieni la risposta
         response = super().run(*args, **kwargs)
-        
-        # Gestisci la risposta per restituirla in un formato JSON
         return self.format_response(response)
 
     def format_response(self, response):
-        # Assicurati che la risposta sia in formato JSON
-        return json.dumps({"products": response})  # Modifica qui per includere i prodotti
+        text = getattr(response, "response", response)
+        try:
+            parsed = json.loads(text)
+            if isinstance(parsed, dict) and "products" in parsed:
+                return json.dumps(parsed)
+        except json.JSONDecodeError:
+            pass
+        return json.dumps({"products": text})
