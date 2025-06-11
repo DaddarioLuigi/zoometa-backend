@@ -100,6 +100,7 @@ class ChatService:
                     "'id_product', 'nome', 'descrizione_breve', 'descrizione', "
                     "'prezzo', 'produttore', 'giacenza', 'categorie', 'product_url' } ] }.\n"
                     "Se non ci sono prodotti idonei, restituisce 'products': [] nel JSON."
+                    "Rispondi solo con il JSON puro, senza virgolette o testo aggiuntivo."
                 ),
             ),
         )
@@ -184,7 +185,6 @@ class ChatService:
         return text
 
     def format_response_as_json(self, text):
-        """Try to extract JSON from the LLM response."""
         try:
             start = text.index('{')
             end = text.rindex('}') + 1
