@@ -42,7 +42,10 @@ class ChatbotAgent:
             llm=llm,
             verbose=True,
             system_prompt=initial_context,
-            temperature=0.4,
+            temperature=0.25,
+            top_p=1.0,
+            presence_penalty=0,
+            frequency_penalty=0.2
         )
         self.chat_history = []
 
